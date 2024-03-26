@@ -9,8 +9,11 @@ import requests
 import random
 
 #添加的功能
-from image_handler import save_photo, get_saved_photo
-from movie_scraper import scrape_movies
+from function.image_handler import save_photo, get_saved_photo
+from function.movie_scraper import scrape_movies
+from function.tv_show_reviews import write_review, read_review
+#路径分享功能
+from function import hiking_route_sharing
 
 def equiped_chatgpt(update, context):
     global chatgpt
@@ -58,6 +61,14 @@ def main():
     dispatcher.add_handler(MessageHandler(Filters.photo, handle_photo))
     
     dispatcher.add_handler(CommandHandler("movie", handle_movie_request))
+# 注册分享tv show命令处理函数
+    dispatcher.add_handler(CommandHandler("save_review", save_review))
+    dispatcher.add_handler(CommandHandler("get_review", get_review))
+    
+    #注册路径分享命令
+    # dispatcher.add_handler(CommandHandler('start', start))
+    dispatcher.add_handler(CommandHandler('save_hiking_route_description', hiking_route_sharing.save_hiking_route_description))
+    dispatcher.add_handler(CommandHandler('share_hiking_route', hiking_route_sharing.share_hiking_route))
     
 # To start the bot:
     updater.start_polling()
@@ -157,6 +168,31 @@ def handle_movie_request(update, context):
             update.message.reply_text(message)
     else:
         update.message.reply_text("未找到相关电影")
+        
+    #tv show功能
+def save_review(update, context):
+    try:
+        tv_show = context.args[0]
+        review = ' '.join(context.args[1:])
+        
+        write_review(tv_show, review)
+        
+        update.message.reply_text('Review saved successfully.')
+    except IndexError:
+        update.message.reply_text('Usage: /save_review <tv_show> <review>')
+
+def get_review(update, context):
+    try:
+        tv_show = context.args[0]
+        
+        review = read_review(tv_show)
+        
+        if review:
+            update.message.reply_text(f"Review for {tv_show}: {review}")
+        else:
+            update.message.reply_text(f"No review found for {tv_show}.")
+    except IndexError:
+        update.message.reply_text('Usage: /get_review <tv_show>')
     
         
 if __name__ == '__main__':
