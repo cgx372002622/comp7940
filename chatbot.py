@@ -120,6 +120,7 @@ def good(update: Update, context: CallbackContext) -> None:
 def handle_photo(update, context):
     # 获取接收到的图片
     photo = update.message.photo[-1]  # 获取最高分辨率的图片
+    print(photo)
     file_id = photo.file_id
 
     # 将图片的file_id保存到Redis中
@@ -143,6 +144,8 @@ def send_saved_photo(update, context):
 def handle_movie_request(update, context):
     # 获取用户发送的电影查询
     query = ' '.join(context.args)
+    print(context)
+    print(update.text)
     
     # 爬取电影数据
     movies = scrape_movies(query)
