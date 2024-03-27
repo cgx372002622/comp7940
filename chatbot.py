@@ -1,5 +1,5 @@
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram import Update, Bot, BotCommand
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler
 import os
 import configparser
 import logging
@@ -9,11 +9,14 @@ import requests
 import random
 
 #添加的功能
-from function.image_handler import save_photo, get_saved_photo
+from function.image_handler import save_photo, get_saved_photo, get_latest_photo, set_photo_attr, pop_latest_photo
 from function.movie_scraper import scrape_movies
 from function.tv_show_reviews import write_review, read_review
 #路径分享功能
 from function import hiking_route_sharing
+
+
+PHOTO, NAME = range(2)
 
 def equiped_chatgpt(update, context):
     global chatgpt
@@ -29,6 +32,10 @@ def main():
     updater = Updater(token=(config['TELEGRAM']['ACCESS_TOKEN']), use_context=True)
     # updater = Updater(token=(os.environ['ACCESS_TOKEN']),  use_context=True)
     dispatcher = updater.dispatcher
+    # 设置Menu菜单
+    commands = [BotCommand('/start', '开始上传图片')]
+    bot = Bot(config['TELEGRAM']['ACCESS_TOKEN'])
+    bot.set_my_commands(commands)
     global redis1
     redis1 = redis.Redis(host=(config['REDIS']['HOST']),
         password=(config['REDIS']['PASSWORD']),
@@ -38,6 +45,17 @@ def main():
 # and why things do not work as expected Meanwhile, update your config.ini as:
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO)
+    
+# 处理图片
+    dispatcher.add_handler(ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
+        states={
+            PHOTO: [MessageHandler(Filters.photo, handle_photo)],
+            NAME: [MessageHandler(Filters.text & ~Filters.command, handle_name)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+        per_message=False
+    ))
     
 # register a dispatcher to handle message: here we register an echo dispatcher
     echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
@@ -55,11 +73,8 @@ def main():
     dispatcher.add_handler(CommandHandler("help", help_command))
     dispatcher.add_handler(CommandHandler("Hello", hello))      #register a new command_handler
     dispatcher.add_handler(CommandHandler("good", good))
-    
-# 处理图片
-    dispatcher.add_handler(CommandHandler("sendphoto", send_saved_photo))
-    dispatcher.add_handler(MessageHandler(Filters.photo, handle_photo))
-    
+    dispatcher.add_handler(CommandHandler("photo", photo)) # get photo
+
     dispatcher.add_handler(CommandHandler("movie", handle_movie_request))
 # 注册分享tv show命令处理函数
     dispatcher.add_handler(CommandHandler("save_review", save_review))
@@ -73,8 +88,73 @@ def main():
 # To start the bot:
     updater.start_polling()
     updater.idle()
+
+def photo(update, context):
+    if (context.args is None or len(context.args) == 0):
+        update.message.reply_text(
+            "Please enter photo name"
+        )
+        return
+    user_id = update.message.from_user.id
+    name = ' '.join(context.args)
+    file_id = get_saved_photo(f"{user_id}@{name}")
+
+    if file_id:
+        # 发送图片给用户
+        update.message.reply_photo(photo=file_id)
+    else:
+        update.message.reply_text('No photo named: ' + name)
+
+def start(update, context):
+    update.message.reply_text(
+        "Hi! I will hold a conversation with you. "
+        "Send /cancel to stop talking to me.\n\n"
+        "After uploading, send /photo plus photo's name to get photo\n\n"
+        "Please upload your photo"
+    )
+    return PHOTO
+
+def handle_photo(update, context):
+    # 用户id
+    user_id = update.message.from_user.id
+    # 获取接收到的图片
+    photo = update.message.photo[-1]  # 获取最高分辨率的图片
+    file_id = photo.file_id
+
+    # 将图片的file_id保存到Redis中
+    save_photo(user_id, file_id)
+
+    update.message.reply_text(
+        "Upload photo successfully!"
+        "Please enter this photo's name"
+    )
+
+    return NAME
+
+def handle_name(update, context):
+    user_id = update.message.from_user.id
+    photo_id = pop_latest_photo(user_id)
+    name = update.message.text
+    success1 = set_photo_attr(f"{user_id}@{name}", 'name', name)
+    success2 = set_photo_attr(f"{user_id}@{name}", 'photo_id', photo_id)
+    if success1 & success2:
+        update.message.reply_text(
+            "Set name successfully!"
+            "Welcome next upload~"
+        )
+        return ConversationHandler.END
+    else:
+        update.message.reply_text(
+            "Oops! Something bad happened, see u next time~"
+        )
+        return ConversationHandler.END
     
-    
+def cancel(update, context):
+    update.message.reply_text(
+        "Welcome next upload! Bye~"
+    )    
+    return ConversationHandler.END
+
 # 定义功能
 def echo(update, context):
     reply_message = update.message.text.upper()
@@ -123,32 +203,6 @@ def good(update: Update, context: CallbackContext) -> None:
         update.message.reply_text(reply_message)
     except IndexError:
         update.message.reply_text('Usage: /good <name>')
-        
-        
-        
-        
-# 处理接收到的图片消息
-def handle_photo(update, context):
-    # 获取接收到的图片
-    photo = update.message.photo[-1]  # 获取最高分辨率的图片
-    print(photo)
-    file_id = photo.file_id
-
-    # 将图片的file_id保存到Redis中
-    save_photo(file_id)
-
-    update.message.reply_text('图片已保存')
-
-# 处理用户请求发送之前保存的图片
-def send_saved_photo(update, context):
-    # 从Redis中获取保存的图片的file_id
-    file_id = get_saved_photo()
-
-    if file_id:
-        # 发送图片给用户
-        update.message.reply_photo(photo=file_id)
-    else:
-        update.message.reply_text('没有保存的图片')
     
 
 # 处理用户请求电影的命令
