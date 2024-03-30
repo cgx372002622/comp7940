@@ -47,19 +47,6 @@ def get_saved_video(id):
         print(f"Error retrieving video ID from redis: {e}")
         return None
 
-def get_latest_photo(user_id):
-    try:
-        # 尝试从Redis读取当前用户最新的file_id
-        file_id = redis_client.lrange(user_id, -1, -1)
-        if file_id:
-            return file_id.decode('utf-8')  # decode bytes to str
-        else:
-            print("No photo ID found in Redis.")
-            return None
-    except Exception as e:
-        print(f"Error retrieving photo ID from redis: {e}")
-        return None
-
 def pop_latest_photo(user_id):
     try:
         # 尝试从Redis获取当前用户最新的file_id
