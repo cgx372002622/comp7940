@@ -69,8 +69,8 @@ def main():
     ))
     
 # register a dispatcher to handle message: here we register an echo dispatcher
-    echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
-    dispatcher.add_handler(echo_handler)
+    # echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
+    # dispatcher.add_handler(echo_handler)
     
     # dispatcher for chatgpt
     global chatgpt
