@@ -22,7 +22,7 @@ def main():
     updater = Updater(token=(os.environ['TELEGRAM_ACCESS_TOKEN']), use_context=True)
     dispatcher = updater.dispatcher
     # add menu in Telegram bot
-    commands = [BotCommand('/start', 'start uploading photo'), BotCommand('/start_video', 'start uploading video'), BotCommand('/help', 'get other chatbot functions')]
+    commands = [BotCommand('/start', 'start uploading photo'), BotCommand('/start_video', 'start uploading video')]
     bot = Bot(os.environ['TELEGRAM_ACCESS_TOKEN'])
     bot.set_my_commands(commands)
         
