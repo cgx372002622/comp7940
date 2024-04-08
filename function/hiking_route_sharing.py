@@ -1,13 +1,17 @@
 import redis
+import os
 
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+global redis1
+redis1 = redis.Redis(host=(os.environ['REDIS_HOST']),
+    password=(os.environ['REDIS_PASSWORD']),
+    port=(os.environ['REDIS_REDISPORT']))
 
 def save_hiking_route_description(update, context):
     if context.args:
         route_name = context.args[0]
         # 保存路线名称到Redis
         redis_key = f"route:{update.effective_user.id}"
-        redis_client.set(redis_key, route_name)
+        redis1.set(redis_key, route_name)
         
         reply_message = f"保存了名为 {route_name} 的徒步路线描述到Redis"
     else:
@@ -17,7 +21,7 @@ def save_hiking_route_description(update, context):
 
 def share_hiking_route(update, context):
     redis_key = f"route:{update.effective_user.id}"
-    route_name = redis_client.get(redis_key)
+    route_name = redis1.get(redis_key)
     
     if route_name:
         reply_message = f"分享名为 {route_name} 的徒步路线描述"

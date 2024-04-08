@@ -22,13 +22,9 @@ def main():
     updater = Updater(token=(os.environ['TELEGRAM_ACCESS_TOKEN']), use_context=True)
     dispatcher = updater.dispatcher
     # add menu in Telegram bot
-    commands = [BotCommand('/start', 'start uploading photo'), BotCommand('/start_video', 'start uploading video')]
+    commands = [BotCommand('/start', 'start uploading photo'), BotCommand('/start_video', 'start uploading video'), BotCommand('/help', 'get other chatbot functions')]
     bot = Bot(os.environ['TELEGRAM_ACCESS_TOKEN'])
     bot.set_my_commands(commands)
-    global redis1
-    redis1 = redis.Redis(host=(os.environ['REDIS_HOST']),
-        password=(os.environ['REDIS_PASSWORD']),
-        port=(os.environ['REDIS_REDISPORT']))
         
     # You can set this logging module, so you will know when and why things do not work as expected Meanwhile
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -206,7 +202,12 @@ def cancel(update, context):
 
 def help_command(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
-    update.message.reply_text('Helping you helping you.')
+    update.message.reply_text(
+        "There are other chatbot functions you can use:\n\n"
+        "/movie + movie name, you can get movie information\n\n"
+        "/save_review + tv_show_name + review, you can save the tv_show review\n\n"
+        "/get_review + tv_show_name, you can get the tv_show review\n\n"
+    )
     
 # 处理用户请求电影的命令
 def handle_movie_request(update, context):

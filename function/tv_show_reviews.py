@@ -1,7 +1,10 @@
 import redis
+import os
 
-# 创建Redis连接
-redis1 = redis.Redis(host='localhost', port=6379, db=0)
+global redis1
+redis1 = redis.Redis(host=(os.environ['REDIS_HOST']),
+    password=(os.environ['REDIS_PASSWORD']),
+    port=(os.environ['REDIS_REDISPORT']))
 
 def write_review(tv_show, review):
     # 将评论存储到Redis中
